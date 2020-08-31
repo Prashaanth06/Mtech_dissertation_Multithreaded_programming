@@ -1,11 +1,3 @@
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <DHT_U.h>
-
-int freq = 1500;
-int channel = 0;
-int resolution = 7;
-int dutyCycle = 128;
 
 #define DHTPIN 32     // Temperature sensor 
 #define fire 27     // Flame sensor
@@ -15,16 +7,15 @@ int dutyCycle = 128;
 #define LED 2        // led for indication
 #define Buzzer 4     // Buzzer. 
 #define Exhaust 5     // Exhaust fan.
+#define watopen 12     // water opening
 
-#define DHTTYPE    DHT11     // DHT 11
-
-DHT_Unified dht(DHTPIN, DHTTYPE);
-
-uint32_t delayMS;
+int freq = 1500;
+int channel = 0;
+int resolution = 7;
+int dutyCycle = 128;
 
 void setup() {
   Serial.begin(115200);
-    unsigned long timeBegin = micros();
     
 
   pinMode(fire,INPUT);  
@@ -34,30 +25,19 @@ void setup() {
   pinMode(LED,OUTPUT);
   pinMode(Exhaust, OUTPUT);
   pinMode(Buzzer,OUTPUT);
-  pinMode(DHTPIN,INPUT);
-
-  // Initialize device.
-  dht.begin();
-  // Print temperature sensor details.
-  sensor_t sensor;
-  dht.temperature().getSensor(&sensor);
-  // Print humidity sensor details.
-  delayMS = sensor.min_delay / 1000;
+  pinMode(watopen,OUTPUT);
 
   ledcSetup(channel, freq, resolution);
   ledcAttachPin(Buzzer, channel);
 
-  unsigned long timeEnd = micros();
-  unsigned long duration = timeEnd - timeBegin;
-  double averageDuration = (double)duration / 1000.0;
-  Serial.println(averageDuration);
-
 }
 
 void loop() {
-  
+
+      unsigned long timeBegin = micros();
+
   // put your main code here, to run repeatedly:
-  delay(200);
+  //delay(200);
   Serial.println("----------");
   Serial.println("----------");
   actuation();
@@ -65,7 +45,6 @@ void loop() {
   
   if(digitalRead(manpres) == 0)
   {
-   temperature();
    flame();
    smoke();
   }
@@ -73,29 +52,17 @@ void loop() {
   {
   manual_press();
   }
-}
 
-void temperature()
-{
-
-delay(delayMS);
-  // Get temperature event and print its value.
-  sensors_event_t event;
-  dht.temperature().getEvent(&event);
-  if (isnan(event.temperature)) {
-    Serial.println(F("Error reading temperature!"));
-  }
-  else {
-    Serial.print(F("Temperature: "));
-    Serial.print(event.temperature);
-    Serial.println(F("°C"));
-  }
+   Serial.print("Allocated heap=");
+  Serial.println(ESP.getMaxAllocHeap());
   
-  if((event.temperature)>= 70)
-  {
-    Serial.println("Fire has occured stay careful get out of here");
-  }
+ unsigned long timeEnd = micros();
+  unsigned long duration = timeEnd - timeBegin;
+  double averageDuration = (double)duration / 1000000.0;
+  Serial.print(averageDuration);
+  Serial.println("s");
 }
+
 
 void flame()
 {
@@ -157,13 +124,16 @@ void actuation()
                 ledcWrite(channel, 0);
                 vTaskDelay(100);
 
-                  /*Water opening*/
+                 /*Water opening*/
+                digitalWrite(watopen,HIGH);
+                
                 }
                 else
                 {
                 digitalWrite(Exhaust,LOW);
                 ledcWrite(channel, 0);
                 digitalWrite(LED,LOW);
+                digitalWrite(watopen,LOW);
                 }
     
 }

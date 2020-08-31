@@ -1,13 +1,6 @@
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <DHT_U.h>
+static int taskCore = 1;
+static int lessCore = 0;
 
-int freq = 1500;
-int channel = 0;
-int resolution = 7;
-int dutyCycle = 128;
-
-#define DHTPIN 25     // Temperature sensor 
 #define fire 27     // Flame sensor
 #define gas 13      // smoke sensor
 #define watlvl 14     // water level sensor
@@ -15,29 +8,27 @@ int dutyCycle = 128;
 #define LED 2        // led for indication
 #define Buzzer 4     // Buzzer  
 #define Exhaust 5     // Exhaust fan.
+#define watopen 12     // water opening
 
-#define DHTTYPE    DHT11     // DHT 11
+int freq = 1500;
+int channel = 0;
+int resolution = 7;
+int dutyCycle = 128;
 
-DHT_Unified dht(DHTPIN, DHTTYPE);
-
-uint32_t delayMS;
+unsigned long start,stoppy;
 
 TaskHandle_t xflameTaskHandle = NULL;
 TaskHandle_t xmanpressTaskHandle = NULL;
 TaskHandle_t xsmokeTaskHandle = NULL;
-TaskHandle_t xtempTaskHandle = NULL;
 TaskHandle_t xactuationTaskHandle = NULL;
-
 
 SemaphoreHandle_t xflameStartSemaphore;
 SemaphoreHandle_t xmanpressSemaphore;
 SemaphoreHandle_t xsmokeSemaphore;
-SemaphoreHandle_t xtempSemaphore;
 SemaphoreHandle_t xactuationSemaphore;
 
 void setup() {
         Serial.begin(115200);   // Serial monitor setting up baud rate
-  unsigned long timeBegin = micros();
   
    pinMode(fire,INPUT);  
    pinMode(gas, INPUT);
@@ -46,59 +37,47 @@ void setup() {
    pinMode(LED,OUTPUT);
    pinMode(Exhaust, OUTPUT);
    pinMode(Buzzer,OUTPUT);
-   pinMode(DHTPIN,INPUT);
-
-   // Initialize device.
-  dht.begin();
-  // Print temperature sensor details.
-  sensor_t sensor;
-  dht.temperature().getSensor(&sensor);
-  // Print humidity sensor details.
-  delayMS = sensor.min_delay / 1000;
+   pinMode(watopen,OUTPUT);
    
    ledcSetup(channel, freq, resolution);
   ledcAttachPin(Buzzer, channel);
       
-      xTaskCreate(flame_watlvl,   /* Function to implement the task */
+      xTaskCreatePinnedToCore(flame_watlvl,   /* Function to implement the task */
                     "flame sensor readings", /* Name of the task */
-                    1000,      /* Stack size in words */
+                    2000,      /* Stack size in words */
                     NULL,       /* Task input parameter */
                     9,          /* Priority of the task */
-                    &xflameTaskHandle);     /* Task handle. */
+                    &xflameTaskHandle,     /* Task handle. */
+                    lessCore);                    /* Task Core*/
        
-      xTaskCreate(manual_press,   /* Function to implement the task */
+      xTaskCreatePinnedToCore(manual_press,   /* Function to implement the task */
                     "manual_press", /* Name of the task */
                      1000,      /* Stack size in words */
                      NULL,       /* Task input parameter */
                       9,          /* Priority of the task */
-                     &xmanpressTaskHandle);     /* Task handle. */
+                     &xmanpressTaskHandle,    /* Task handle. */
+                     taskCore);                /* Task Core*/
 
-       xTaskCreate(smoke,   /* Function to implement the task */
+       xTaskCreatePinnedToCore(smoke,   /* Function to implement the task */
                     "Smoke sensor reading", /* Name of the task */
                      1000,      /* Stack size in words */
                      NULL,       /* Task input parameter */
                       8,          /* Priority of the task */
-                     &xsmokeTaskHandle);     /* Task handle. */
+                     &xsmokeTaskHandle,     /* Task handle. */
+                     lessCore);                   /* Task Core*/
 
-       xTaskCreate(temperature,   /* Function to implement the task */
-                    "temperature sensor reading", /* Name of the task */
-                     1000,      /* Stack size in words */
-                     NULL,       /* Task input parameter */
-                      7,          /* Priority of the task */
-                     &xtempTaskHandle);     /* Task handle. */
-
-      xTaskCreate(actuation,   /* Function to implement the task */
+      xTaskCreatePinnedToCore(actuation,   /* Function to implement the task */
                     "Actuation task", /* Name of the task */
-                     1000,      /* Stack size in words */
+                     2000,      /* Stack size in words */
                      NULL,       /* Task input parameter */
                       10,          /* Priority of the task */
-                     &xactuationTaskHandle);     /* Task handle. */
-                     
+                     &xactuationTaskHandle,     /* Task handle. */
+                     taskCore);                        /* Task Core*/
 
-  unsigned long timeEnd = micros();
-  unsigned long duration = timeEnd - timeBegin;
-  double averageDuration = (double)duration / 1000.0;
-  Serial.println(averageDuration);
+  
+  Serial.print("Allocated heap=");
+  Serial.println(ESP.getMaxAllocHeap());
+                       
 }
 
 
@@ -109,12 +88,13 @@ void loop()
 
 
 void flame_watlvl(void * pvParameters)
-{
+{ 
   xflameStartSemaphore = xSemaphoreCreateBinary();
   while(1)
   {
     if (xSemaphoreTake(xflameStartSemaphore, 0) == pdTRUE)
     {
+        start = xTaskGetTickCount();
     if(digitalRead(manpres) == 0)
     {
         Serial.println("Flame sensor task is taken");
@@ -146,6 +126,9 @@ void flame_watlvl(void * pvParameters)
    Serial.println("----------");
   Serial.println("----------");
     vTaskDelay(100);
+    stoppy= xTaskGetTickCount()- start;
+    Serial.print("flame task=");
+  Serial.println(stoppy);
    xSemaphoreGive( xflameStartSemaphore ) == pdTRUE; 
   }
 }
@@ -157,6 +140,7 @@ void manual_press(void * pvParameters)
     {
       if (xSemaphoreTake(xmanpressSemaphore, 0) == pdTRUE)
     {
+      start = xTaskGetTickCount();
     if(digitalRead(manpres) == 1)
     {
       Serial.println("Manual Press task given");
@@ -165,7 +149,10 @@ void manual_press(void * pvParameters)
     }
     Serial.println("----------");
   Serial.println("----------");
-    vTaskDelay(100);
+    vTaskDelay(50);
+     stoppy= xTaskGetTickCount()- start;
+     Serial.print("Manual task=");
+  Serial.println(stoppy);
   xSemaphoreGive(xmanpressSemaphore) == pdTRUE;
 }
 }
@@ -177,59 +164,24 @@ void smoke(void * pvParameters)
     {
       if (xSemaphoreTake(xsmokeSemaphore, 0) == pdTRUE)
     {
+      start = xTaskGetTickCount();
     if(digitalRead(manpres) == 0)
     {
       Serial.println("smoke sensor task is taken");
       Serial.print("smoke=");
       Serial.println(analogRead(gas));
-      if((analogRead(gas)>=700) && (digitalRead(fire)==1))
-      {
-        Serial.println("Fire has occured stay careful get out of here");
-      }
     }
     }
     Serial.println("----------");
   Serial.println("----------");
-    vTaskDelay(100);
+    vTaskDelay(50);
+     stoppy= xTaskGetTickCount()- start;
+     Serial.print("smoke task=");
+  Serial.println(stoppy);
   xSemaphoreGive(xsmokeSemaphore) == pdTRUE;
 }
 }
 
-void temperature(void * pvParameters)
-{
- xtempSemaphore = xSemaphoreCreateBinary();
-    while(1)
-    {
-   if (xSemaphoreTake(xtempSemaphore, 0) == pdTRUE)
-    {
-    if(digitalRead(manpres) == 0)
-    {
-      Serial.println("temperature sensor task has taken");
-       delay(delayMS);
-  // Get temperature event and print its value.
-  sensors_event_t event;
-  dht.temperature().getEvent(&event);
-  if (isnan(event.temperature)) {
-    Serial.println(F("Error reading temperature!"));
-  }
-  else {
-    Serial.print(F("Temperature: "));
-    Serial.print(event.temperature);
-    Serial.println(F("°C"));
-  }
-
-  if((event.temperature)>= 80)
-  {
-    Serial.println("Fire has occured stay careful get out of here");
-  }
-    }
-    }
-    Serial.println("----------");
-  Serial.println("----------");
-    vTaskDelay(100);
-  xSemaphoreGive(xtempSemaphore) == pdTRUE;
-}
-}
 
 void actuation(void * pvParameters)
 {
@@ -238,6 +190,7 @@ void actuation(void * pvParameters)
     {
    if (xSemaphoreTake(xactuationSemaphore, 0) == pdTRUE)
     {
+       start = xTaskGetTickCount();
       if((digitalRead(manpres) == 1) || (analogRead(gas)>=700) && (digitalRead(fire)==0))
                 {
                   Serial.println("Actuation task started");
@@ -251,21 +204,29 @@ void actuation(void * pvParameters)
                 digitalWrite(Exhaust,HIGH);
 
                 /* Alarm indication*/
+                
                 ledcWrite(channel, dutyCycle);
                 vTaskDelay(100);
                 ledcWrite(channel, 0);
                 vTaskDelay(100);
+
+                /*Water opening*/
+                digitalWrite(watopen,HIGH);
+                
                 }
                 else
                 {
                 digitalWrite(Exhaust,LOW);
                 ledcWrite(channel, 0);
                 digitalWrite(LED,LOW);
+                digitalWrite(watopen,LOW);
                 }
               
     }
   vTaskDelay(100);
+  stoppy= xTaskGetTickCount()- start;
+  Serial.print("Actuation task=");
+  Serial.println(stoppy);
   xSemaphoreGive(xactuationSemaphore) == pdTRUE;
     }
-  
 }

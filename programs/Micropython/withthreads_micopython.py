@@ -1,7 +1,16 @@
-import machine
+import _thread
+import machine, time, gc, micropython
 from machine import Pin,ADC
 from time import sleep
-import _thread
+
+"""N = 200000
+t0 = time.ticks_us()"""
+start = 0
+
+gc.collect()
+micropython.mem_info()
+print('-----------------------------')
+
 
 led = machine.Pin(2,machine.Pin.OUT)      # LED
 buzzer = machine.Pin(4,machine.Pin.OUT)    # Buzzer 
@@ -9,13 +18,14 @@ exhaust = machine.Pin(5,machine.Pin.OUT)    # Exhaust fan motor
 manual_button = machine.Pin(15, machine.Pin.IN, machine.Pin.PULL_UP)   # Manual Press button
 smoke = ADC(Pin(35))                      # MQ-2 sensor
 flame = machine.Pin(27,machine.Pin.IN)      # Flame sensor
+watopen = machine.Pin(12,machine.Pin.OUT)   # water opening
 
 mutex = _thread.allocate_lock()
-
 
 buzzer_value = buzzer.value()     # buzzer reading
 led_state = led.value()           # LED reading the pin state
 exhaust_fan = exhaust.value()    # reading exhaust fan
+water_opening = watopen.value()   # reading water opening
 
 
 def water_levelThread():                     # function for water level sensor
@@ -90,6 +100,9 @@ def actuationThread():                     # function for actuation unit
             # Exhaust fan
             exhaust.value(1)
 
+            # Water opening
+            watopen.value(1)
+
             print('\nFire has occured stay careful get out of here')
             print('')
 
@@ -97,6 +110,7 @@ def actuationThread():                     # function for actuation unit
             led.value(0)
             buzzer.value(0)
             exhaust.value(0)
+            watopen.value(0)
         mutex.release()
 
 
@@ -105,3 +119,15 @@ _thread.start_new_thread(smoke_sensThread, ())
 _thread.start_new_thread(manual_pressThread, ())
 _thread.start_new_thread(flame_sensorThread, ())
 _thread.start_new_thread(actuationThread, ())
+
+
+"""t1 = time.ticks_us()
+dt =  time.ticks_diff(t1,t0)
+fmt = '{:5.3f} sec, {:6.3f} usec/blink : {:8.2f} kblinks/sec'
+print(fmt.format(dt * 1e-6, dt / N, N / dt * 1e3))"""
+end = time.time()
+total = end-start
+#print('execution time=')
+print(total)
+
+
