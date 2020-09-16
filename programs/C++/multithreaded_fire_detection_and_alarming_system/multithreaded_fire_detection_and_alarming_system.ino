@@ -75,8 +75,8 @@ void setup() {
                      taskCore);                        /* Task Core*/
 
   
-  Serial.print("Allocated heap=");
-  Serial.println(ESP.getMaxAllocHeap());
+  /*Serial.print("Allocated heap=");
+  Serial.println(ESP.getMaxAllocHeap());*/
                        
 }
 
@@ -94,7 +94,8 @@ void flame_watlvl(void * pvParameters)
   {
     if (xSemaphoreTake(xflameStartSemaphore, 0) == pdTRUE)
     {
-        start = xTaskGetTickCount();
+      vTaskPrioritySet(xflameStartSemaphore,9);
+        //start = xTaskGetTickCount();
     if(digitalRead(manpres) == 0)
     {
         Serial.println("Flame sensor task is taken");
@@ -126,9 +127,9 @@ void flame_watlvl(void * pvParameters)
    Serial.println("----------");
   Serial.println("----------");
     vTaskDelay(100);
-    stoppy= xTaskGetTickCount()- start;
+    /*stoppy= xTaskGetTickCount()- start;
     Serial.print("flame task=");
-  Serial.println(stoppy);
+  Serial.println(stoppy);*/
    xSemaphoreGive( xflameStartSemaphore ) == pdTRUE; 
   }
 }
@@ -140,7 +141,8 @@ void manual_press(void * pvParameters)
     {
       if (xSemaphoreTake(xmanpressSemaphore, 0) == pdTRUE)
     {
-      start = xTaskGetTickCount();
+            vTaskPrioritySet(xmanpressSemaphore,9);
+     // start = xTaskGetTickCount();
     if(digitalRead(manpres) == 1)
     {
       Serial.println("Manual Press task given");
@@ -150,9 +152,9 @@ void manual_press(void * pvParameters)
     Serial.println("----------");
   Serial.println("----------");
     vTaskDelay(50);
-     stoppy= xTaskGetTickCount()- start;
+    /* stoppy= xTaskGetTickCount()- start;
      Serial.print("Manual task=");
-  Serial.println(stoppy);
+  Serial.println(stoppy);*/
   xSemaphoreGive(xmanpressSemaphore) == pdTRUE;
 }
 }
@@ -164,7 +166,8 @@ void smoke(void * pvParameters)
     {
       if (xSemaphoreTake(xsmokeSemaphore, 0) == pdTRUE)
     {
-      start = xTaskGetTickCount();
+     vTaskPrioritySet(xsmokeSemaphore,8);
+      //start = xTaskGetTickCount();
     if(digitalRead(manpres) == 0)
     {
       Serial.println("smoke sensor task is taken");
@@ -174,10 +177,10 @@ void smoke(void * pvParameters)
     }
     Serial.println("----------");
   Serial.println("----------");
-    vTaskDelay(50);
-     stoppy= xTaskGetTickCount()- start;
+    vTaskDelay(100);
+     /*stoppy= xTaskGetTickCount()- start;
      Serial.print("smoke task=");
-  Serial.println(stoppy);
+  Serial.println(stoppy);*/
   xSemaphoreGive(xsmokeSemaphore) == pdTRUE;
 }
 }
@@ -190,8 +193,9 @@ void actuation(void * pvParameters)
     {
    if (xSemaphoreTake(xactuationSemaphore, 0) == pdTRUE)
     {
-       start = xTaskGetTickCount();
-      if((digitalRead(manpres) == 1) || (analogRead(gas)>=700) && (digitalRead(fire)==0))
+           vTaskPrioritySet(xactuationSemaphore,10);
+       //start = xTaskGetTickCount();
+      if((digitalRead(manpres) == 1) || (analogRead(gas)>=100) && (digitalRead(fire)==0))
                 {
                   Serial.println("Actuation task started");
                   /* LED indication */
@@ -224,9 +228,9 @@ void actuation(void * pvParameters)
               
     }
   vTaskDelay(100);
-  stoppy= xTaskGetTickCount()- start;
+  /*stoppy= xTaskGetTickCount()- start;
   Serial.print("Actuation task=");
-  Serial.println(stoppy);
+  Serial.println(stoppy);*/
   xSemaphoreGive(xactuationSemaphore) == pdTRUE;
     }
 }

@@ -1,5 +1,4 @@
 
-#define DHTPIN 32     // Temperature sensor 
 #define fire 27     // Flame sensor
 #define gas 13      // smoke sensor
 #define watlvl 14     // water level sensor
@@ -34,7 +33,7 @@ void setup() {
 
 void loop() {
 
-      unsigned long timeBegin = micros();
+      //unsigned long timeBegin = micros();
 
   // put your main code here, to run repeatedly:
   //delay(200);
@@ -53,35 +52,34 @@ void loop() {
   manual_press();
   }
 
-   Serial.print("Allocated heap=");
+   /*Serial.print("Allocated heap=");
   Serial.println(ESP.getMaxAllocHeap());
   
  unsigned long timeEnd = micros();
   unsigned long duration = timeEnd - timeBegin;
   double averageDuration = (double)duration / 1000000.0;
   Serial.print(averageDuration);
-  Serial.println("s");
+  Serial.println("s");*/
 }
 
 
 void flame()
 {
+  delay(100);
    Serial.print("flame=");
    Serial.println(digitalRead(fire));
 }
 
 void smoke()
 {
+   delay(100);
   Serial.print("smoke=");
    Serial.println(analogRead(gas));
-   if((analogRead(gas)>=700) && (digitalRead(fire) == 0))
-   {
-    Serial.println("Fire has occured stay careful get out of here");
-   }
 }
 
 void water_level()
 {
+   delay(100);
   Serial.print("water level=");
    Serial.println(analogRead(watlvl));
 
@@ -101,13 +99,13 @@ void water_level()
 
 void manual_press()
 {
-    //actuation();
+   delay(100);
     Serial.println("open everything");
 }
 
 void actuation()
 {
-   if((digitalRead(manpres) == 1) || (analogRead(gas)>=700) && (digitalRead(fire)==0))
+   if((digitalRead(manpres) == 1) || (analogRead(gas)>=100) && (digitalRead(fire)==0))
                 {
                   /* LED indication */
                 digitalWrite(LED,HIGH);

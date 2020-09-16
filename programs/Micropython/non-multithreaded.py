@@ -1,10 +1,28 @@
-import machine, time, gc, micropython, esp
+import machine, time, gc, micropython, esp, os
 from machine import Pin,ADC
 from time import sleep
 
-N = 200000
-t0 = time.ticks_us()
-#start = 0
+"""N = 200000
+t0 = time.ticks_us()"""
+start = 0
+
+
+def df():
+    s = os.statvfs('//')
+    return ('{0} MB'.format((s[0]*s[3])/1327936))
+
+def free(full=False):
+    F = gc.mem_free()
+    print(gc.mem_free())
+    A = gc.mem_alloc()
+    print(gc.mem_alloc())
+    T = F+A
+    P = '{0:.2f}%'.format(F/T*100)
+    if not full: return P
+    else : return ('Total:{0} Free:{1} ({2})'.format(T,F,P))
+
+print('disk free: ', df())
+print('memory free: ', free())
 
 gc.collect()
 micropython.mem_info()
@@ -26,7 +44,7 @@ water_opening = watopen.value()   # reading water opening
 
 
 def water_level():                     # function for water level sensor
-    #sleep(0.1)
+    sleep(0.1)
     water_sensor = water.read()       # reading water level
     print('Water level=%d' %water_sensor)
     if water_sensor >= 2000:
@@ -38,12 +56,12 @@ def water_level():                     # function for water level sensor
 
 
 def smoke_sens():                    # function for smoke sensor
-    #sleep(0.1)
+    sleep(0.1)
     smoke_sensor = smoke.read()       # reading MQ2 sensor
     print('Smoke sensor value=%d ' % smoke_sensor)
 
 def flame_sensor():                  # function for flame sensor
-    #sleep(0.1)
+    sleep(0.1)
     flame_value = flame.value()       # reading flame sensor
     print('Flame sensor value=%d ' % flame_value)   # Printing flame sensor value
 
@@ -55,7 +73,7 @@ def manual_press():                  # function for manual press
 
 
 def actuation():                     # function for actuation unit
-    if manual_button.value() == 1 or smoke.read() >=1400 and flame.value()  == 0:
+    if manual_button.value() == 1 or smoke.read() >=700 and flame.value()  == 0:
         # LED on indication
         led.value(1)
         sleep(0.1)
@@ -94,6 +112,7 @@ while True:
         manual_press()
         print('')
     break
+
 
 """t1 = time.ticks_us()
 dt =  time.ticks_diff(t1,t0)

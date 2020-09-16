@@ -1,16 +1,30 @@
 import _thread
-import machine, time, gc, micropython
+import machine, time, gc, micropython, os
 from machine import Pin,ADC
 from time import sleep
 
 """N = 200000
-t0 = time.ticks_us()"""
+t0 = time.ticks_us()
 start = 0
 
 gc.collect()
 micropython.mem_info()
-print('-----------------------------')
+print('-----------------------------')"""
 
+def df():
+    s = os.statvfs('//')
+    return ('{0} MB'.format((s[0]*s[3])/1048576))
+
+def free(full=False):
+    F = gc.mem_free()
+    A = gc.mem_alloc()
+    T = F+A
+    P = '{0:.2f}%'.format(F/T*100)
+    if not full: return P
+    else : return ('Total:{0} Free:{1} ({2})'.format(T,F,P))
+
+print('disk free: ', df())
+print('memory free: ', free())
 
 led = machine.Pin(2,machine.Pin.OUT)      # LED
 buzzer = machine.Pin(4,machine.Pin.OUT)    # Buzzer 
@@ -84,7 +98,7 @@ def actuationThread():                     # function for actuation unit
     print('')
     while True:
         mutex.acquire()
-        if manual_button.value() == 1 or smoke.read() >=1400 and flame.value()  == 0:
+        if manual_button.value() == 1 or smoke.read() >=700 and flame.value()  == 0:
             # LED on indication
             led.value(1)
             sleep(0.1)
@@ -127,7 +141,7 @@ fmt = '{:5.3f} sec, {:6.3f} usec/blink : {:8.2f} kblinks/sec'
 print(fmt.format(dt * 1e-6, dt / N, N / dt * 1e3))"""
 end = time.time()
 total = end-start
-#print('execution time=')
+print('execution time=')
 print(total)
 
 
